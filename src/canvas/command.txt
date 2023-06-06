@@ -1,2 +1,6 @@
 g++ client.cpp -o client -lopencv_core -lopencv_imgcodecs -lopencv_highgui $(pkg-config --libs --cflags opencv4)
 g++ server.cpp -o server -lopencv_core -lopencv_imgcodecs -lopencv_highgui -lopencv_videoio $(pkg-config --libs --cflags opencv4)
+
+
+g++ serv.c -o serv `pkg-config --cflags --libs opencv4`
+g++ clnt.c -o clnt `pkg-config --cflags --libs opencv4`

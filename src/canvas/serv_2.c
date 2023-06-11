@@ -31,6 +31,7 @@ int clnt_cnt=0;
 int clnt_socks[MAX_CLNT];
 int presenter; //출제자
 pthread_mutex_t mutx;
+int valread;
 
 int main(int argc, char *argv[])
 {

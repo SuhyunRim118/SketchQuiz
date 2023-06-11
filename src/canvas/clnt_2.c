@@ -20,6 +20,41 @@ void error_handling(char * msg);
 	
 char name[NAME_SIZE]="[DEFAULT]";
 char msg[BUF_SIZE];
+int valread;
+int flag;
+
+Mat temp;
+Point p;
+bool isDrawing;
+
+void onMouse(int event, int x, int y, int flags, void* param)
+{
+    if (event == cv::EVENT_LBUTTONDOWN)
+    {
+        // Start drawing
+        isDrawing = true;
+        p = cv::Point(x, y);
+    }
+    else if (event == cv::EVENT_LBUTTONUP)
+    {
+        // Stop drawing
+        isDrawing = false;
+    }
+    else if (event == cv::EVENT_MOUSEMOVE && isDrawing)
+    {
+        temp = *(Mat*)param;
+
+        // Draw a line from the previous point to the current point
+        cv::Point currPt(x, y);
+        cv::line(temp, p, currPt, cv::Scalar(255, 255, 255), 3);
+        p = currPt;
+    }
+    else if (event == cv::EVENT_RBUTTONDOWN)
+    {
+        // Clear the canvas
+        temp = cv::Scalar(0, 0, 0);
+    }
+}
 	
 int main(int argc, char *argv[])
 {
@@ -47,7 +82,7 @@ int main(int argc, char *argv[])
 	pthread_create(&rcv_thread, NULL, recv_msg, (void*)&sock);
     pthread_create(&snd_canvas_thread, NULL, send_canvas, (void*)&sock);
 	pthread_create(&rcv_canvas_thread, NULL, recv_canvas, (void*)&sock);
-    
+
 	pthread_join(snd_thread, &thread_return);
 	pthread_join(rcv_thread, &thread_return);
     pthread_join(snd_canvas_thread, &thread_return);

@@ -14,8 +14,18 @@ void * handle_clnt(void * arg);
 void send_msg(char * msg, int len);
 void error_handling(char * msg);
 
+char * bird_keyword[31] = 
+	{"apple", "흑기러기", "고니", "원앙", "청둥오리", "희줄박이오리", 
+	"뿔논병아리", "논병아리", "꿩", "메추라기", "괭이갈매기",
+	"마도요", "깝작도요","노랑발도요","물꿩", "바다오리",
+	"호사도요", "두루미", "흑두루미", "뜸부기", "물닭",
+	"홍학", "쇠딱따구리", "오색딱따구리", "새홀리기",
+	"황조롱이", "멧비둘기", "검은등뻐꾸기", "따오기", "저어새"};
+int quizNum;
+
 int clnt_cnt=0;
 int clnt_socks[MAX_CLNT];
+int presenter; //출제자
 pthread_mutex_t mutx;
 
 int main(int argc, char *argv[])
@@ -41,6 +51,8 @@ int main(int argc, char *argv[])
 		error_handling("bind() error");
 	if(listen(serv_sock, 5)==-1)
 		error_handling("listen() error");
+	quizNum=0;
+	presenter=0;
 	
 	while(1)
 	{
@@ -58,15 +70,41 @@ int main(int argc, char *argv[])
 	close(serv_sock);
 	return 0;
 }
+int start;
+int turn;
 	
 void * handle_clnt(void * arg)
 {
 	int clnt_sock=*((int*)arg);
 	int str_len=0, i;
 	char msg[BUF_SIZE];
+	char keyword_msg[BUF_SIZE];
+	int before_presenter=99;
+
+	start=0;
 	
 	while((str_len=read(clnt_sock, msg, sizeof(msg)))!=0)
-		send_msg(msg, str_len);
+	{
+		if (start) {
+			send_msg(msg, str_len);
+		}
+		else if ((strstr(msg,"start")!=NULL || strstr(msg,"sss")!=NULL) && clnt_cnt >= 2 && !start){
+			start=1;
+			for(i=0; i<clnt_cnt; i++){
+				write(clnt_socks[i], "Game Start!\n", strlen("Game Start!\n"));
+				printf("start: %d %s\n", clnt_cnt, msg);
+			}
+			
+		}
+		else if ((before_presenter!=presenter)){
+			sprintf(keyword_msg, "Keyword: %s!\n", bird_keyword[quizNum]);
+			write(clnt_socks[presenter], keyword_msg, strlen(keyword_msg));
+			before_presenter = presenter;
+		}
+
+	}
+
+	if (clnt_cnt< 2) start=0;
 	
 	pthread_mutex_lock(&mutx);
 	for(i=0; i<clnt_cnt; i++)   // remove disconnected client
@@ -87,10 +125,30 @@ void * handle_clnt(void * arg)
 void send_msg(char * msg, int len)   // send to all
 {
 	int i;
+	char send[BUF_SIZE];
+	printf("send msg: %s", msg);
+	
+	strcpy(send, msg); //msg 저장
+	msg[strlen(msg)-1]=0;
+
+	printf("strs %s", strstr(bird_keyword[quizNum], msg));
+
+	if (strstr(msg, bird_keyword[quizNum]) != NULL){
+		sprintf(send, "%s:O\n", msg);
+		quizNum++;
+		
+		if(presenter > clnt_cnt) presenter=0;
+		else presenter++;
+	}
+	else sprintf(send, "%s:X\n", msg);
+
+	printf("answer: %s\n", bird_keyword[quizNum]);
+	
 	pthread_mutex_lock(&mutx);
 	for(i=0; i<clnt_cnt; i++)
-		write(clnt_socks[i], msg, len);
+		write(clnt_socks[i], send, strlen(send));
 	pthread_mutex_unlock(&mutx);
+
 }
 
 void error_handling(char * msg)

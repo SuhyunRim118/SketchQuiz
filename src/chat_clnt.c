@@ -60,6 +60,7 @@ void * send_msg(void * arg)   // send thread main
 		}
 		sprintf(name_msg,"%s %s", name, msg);
 		write(sock, name_msg, strlen(name_msg));
+		strcpy(msg, "");
 	}
 	return NULL;
 }

@@ -14,13 +14,20 @@ void * handle_clnt(void * arg);
 void send_msg(char * msg, int len);
 void error_handling(char * msg);
 
-char * bird_keyword[31] = 
-	{"apple", "흑기러기", "고니", "원앙", "청둥오리", "희줄박이오리", 
+const char * bird_keyword[31] = 
+	{"apple", "흑기러기", "고니", "원앙", "청둥오리", "흰줄박이오리", 
 	"뿔논병아리", "논병아리", "꿩", "메추라기", "괭이갈매기",
 	"마도요", "깝작도요","노랑발도요","물꿩", "바다오리",
 	"호사도요", "두루미", "흑두루미", "뜸부기", "물닭",
 	"홍학", "쇠딱따구리", "오색딱따구리", "새홀리기",
 	"황조롱이", "멧비둘기", "검은등뻐꾸기", "따오기", "저어새"};
+const char * english_keyword[31] = 
+	{"apple", "banana", "grape", "bat", "cat", "dog", 
+	"bird", "pan", "straw", "movie", "series",
+	"egg", "corn", "water", "wine", "milk",
+	"horse", "monkey", "flog", "mouse", "rizard",
+	"fox", "cow", "ape", "barrrow", "bear"
+	"salmon", "boar", "buffalo", "rion", "tiger"};
 int quizNum;
 
 int clnt_cnt=0;
@@ -53,6 +60,7 @@ int main(int argc, char *argv[])
 		error_handling("listen() error");
 	quizNum=0;
 	presenter=0;
+	char buf[30];
 	
 	while(1)
 	{
@@ -65,7 +73,9 @@ int main(int argc, char *argv[])
 	
 		pthread_create(&t_id, NULL, handle_clnt, (void*)&clnt_sock);
 		pthread_detach(t_id);
-		printf("Connected client IP: %s \n", inet_ntoa(clnt_adr.sin_addr));
+		printf("Connected client IP: %s (%d)\n", inet_ntoa(clnt_adr.sin_addr), clnt_sock);
+
+		
 	}
 	close(serv_sock);
 	return 0;
@@ -79,7 +89,7 @@ void * handle_clnt(void * arg)
 	int str_len=0, i;
 	char msg[BUF_SIZE];
 	char keyword_msg[BUF_SIZE];
-	int before_presenter=99;
+	char buf[BUF_SIZE];
 
 	start=0;
 	
@@ -91,16 +101,18 @@ void * handle_clnt(void * arg)
 		else if ((strstr(msg,"start")!=NULL || strstr(msg,"sss")!=NULL) && clnt_cnt >= 2 && !start){
 			start=1;
 			for(i=0; i<clnt_cnt; i++){
-				write(clnt_socks[i], "Game Start!\n", strlen("Game Start!\n"));
-				printf("start: %d %s\n", clnt_cnt, msg);
+				sprintf(buf, "Game Start!\n");
+				write(clnt_socks[i], buf, strlen(buf));
+				printf("start: %d [%d] %s\n", clnt_cnt, clnt_socks[i], msg);
 			}
-			
-		}
-		else if ((before_presenter!=presenter)){
-			sprintf(keyword_msg, "Keyword: %s!\n", bird_keyword[quizNum]);
+			sprintf(keyword_msg, "Keyword: %s!\n", english_keyword[quizNum]);
 			write(clnt_socks[presenter], keyword_msg, strlen(keyword_msg));
-			before_presenter = presenter;
 		}
+		else {
+				sprintf(buf, "Currently logged on: %d people\n", clnt_cnt);
+				write(clnt_sock, buf, strlen(buf));
+		}
+		memset(msg, 0, strlen(msg));
 
 	}
 
@@ -126,23 +138,42 @@ void send_msg(char * msg, int len)   // send to all
 {
 	int i;
 	char send[BUF_SIZE];
-	printf("send msg: %s", msg);
+	char keyword_msg[BUF_SIZE];
+	printf("send msg: %s\n", msg);
 	
+
 	strcpy(send, msg); //msg 저장
+	send[strlen(msg)] = 0;
 	msg[strlen(msg)-1]=0;
 
-	printf("strs %s", strstr(bird_keyword[quizNum], msg));
 
-	if (strstr(msg, bird_keyword[quizNum]) != NULL){
+	if (strstr(msg, english_keyword[quizNum]) != NULL){
 		sprintf(send, "%s:O\n", msg);
 		quizNum++;
+		printf("P %d, %d\n", presenter, clnt_socks[presenter]);
 		
-		if(presenter > clnt_cnt) presenter=0;
+		if(presenter >= clnt_cnt-1) presenter=0;
 		else presenter++;
+				printf("ㅖ %d, %d\n", presenter, clnt_socks[presenter]);
+
+
+		for(i=4; i<4+clnt_cnt; i++){
+			if (i != clnt_socks[presenter]) {
+				write(i, "guess", strlen("guess"));
+				printf("G %d\n", i);
+
+			}
+			else {
+				write(i, "draw", strlen("draw"));
+				printf("D %d\n", i);
+			}
+		}
+		sprintf(keyword_msg, "Keyword: %s!\n", english_keyword[quizNum]);
+		write(clnt_socks[presenter], keyword_msg, strlen(keyword_msg));
 	}
 	else sprintf(send, "%s:X\n", msg);
 
-	printf("answer: %s\n", bird_keyword[quizNum]);
+	printf("answer: %s\n", english_keyword[quizNum]);
 	
 	pthread_mutex_lock(&mutx);
 	for(i=0; i<clnt_cnt; i++)

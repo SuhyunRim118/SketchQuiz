@@ -15,18 +15,19 @@ using namespace cv;
 void * send_msg(void * arg);
 void * recv_msg(void * arg);
 void send_canvas(int sock);
+void recv_canvas(int sock, char * msg);
 void error_handling(char * msg);
 
 char name[NAME_SIZE]="[DEFAULT]";
 char msg[BUF_SIZE];
 int flag = 1;
 
-///
+// canvas related variables
 Mat temp;
 Point p;
 bool isDrawing;
 int clear_flag=-2;
-Mat recv_canvas;
+Mat get_canvas;
 Point prevPoint(-1, -1);
 Point currPoint(-1,-1);
 
@@ -61,8 +62,6 @@ void onMouse(int event, int x, int y, int flags, void* param)
         clear_flag = 1;
     }
 }
-///
-
 
 int main(int argc, char *argv[])
 {
@@ -94,16 +93,6 @@ int main(int argc, char *argv[])
     pthread_join(snd_thread, &thread_return);
     pthread_join(rcv_thread, &thread_return);
 
-    // while(1) {
-    //     if(canvasUpdated) {
-    //         // Display the received drawing
-    //         printf("here\n");
-    //         imshow("Received Drawing", canvas);
-    //         waitKey(1);
-    //         canvasUpdated = false;
-    //     }
-    // }
-
     close(sock);
     return 0;
 }
@@ -126,7 +115,6 @@ void * send_msg(void * arg)   // send thread main
             write(sock, name_msg, strlen(name_msg));
             memset(msg, 0, sizeof(msg));
         }
-        
     }
     return NULL;
 }
@@ -138,9 +126,8 @@ void * recv_msg(void * arg)   // read thread main
     char notice[NAME_SIZE+BUF_SIZE];
     int str_len;
 
-    namedWindow("Received Drawing", WINDOW_NORMAL);
-    recv_canvas = Mat::zeros(600, 800, CV_8UC3);
-    // Point prevPoint(-1, -1);
+    // namedWindow("Received Drawing", WINDOW_NORMAL);
+    get_canvas = Mat::zeros(500, 500, CV_8UC3);
 
     while(1)
     {
@@ -150,52 +137,7 @@ void * recv_msg(void * arg)   // read thread main
         name_msg[str_len]=0;
         
         if (flag==1 && name_msg[0]=='2') { // read canvas
-            int x=0;
-            int y=0;
-            int count=0;
-            char trash = ' ';
-
-            // x, y 좌표값 얻기
-            char *ptr = strtok(name_msg, ",");
-            memset(name_msg, 0, strlen(name_msg));
-
-            while (ptr != NULL)
-            {
-                if(count==1) x = atoi(ptr);
-                else if(count==2) y = atoi(ptr);
-                else trash = ptr[0];
-
-                ptr = strtok(NULL, ",");
-                count++;
-            }
-
-            // printf("x: %d and y: %d\n", x, y);
-
-            if(x==-20 && y==-20) {
-                recv_canvas = Scalar(0,0,0);
-            }
-            else if(x==-10 && y==-10) {
-                prevPoint.x = -1;
-                prevPoint.y = -1;
-            }
-            else {
-                currPoint = Point(x, y);
-                printf("curr x: %d, y: %d // prev x: %d, y: %d\n", currPoint.x, currPoint.y, prevPoint.x, prevPoint.y);
-
-                    // line(recv_canvas, prevPoint, currPoint, Scalar(255, 255, 255), 3);
-                    // circle(recv_canvas, currPoint, 5, Scalar(255,255,255),1,8,0);
-                if (prevPoint.x != -1 && prevPoint.y != -1) {
-                    // printf("here\n\n");
-                    line(recv_canvas, prevPoint, currPoint, Scalar(255, 255, 255), 3);
-                }
-
-                prevPoint = currPoint;
-            }
-
-            // canvasUpdated = true;
-            // Display the received drawing
-            imshow("Received Drawing", recv_canvas);
-            waitKey(30);
+            recv_canvas(sock, name_msg);
         }
         else {
             if (!strcmp(name_msg, "draw")) {
@@ -209,24 +151,21 @@ void * recv_msg(void * arg)   // read thread main
                 flag = 1;
                 printf("guess: %d\n", flag);
                 sprintf(name_msg, "[Guess the Keyword!]\n");
-                // recv_canvas(sock);
                 // continue;
             }
             fputs(name_msg, stdout);
-            // fputs(notice, stdout);
         }
-        
     }
     return NULL;
 }
 
-void send_canvas(int sock)
+void send_canvas(int sock) // draw and send canvas
 {
     int x, y;
     char coordinates[BUF_SIZE];
 
     namedWindow("Canvas", WINDOW_NORMAL);
-    Mat canvas = Mat::zeros(600, 800, CV_8UC3);
+    Mat canvas = Mat::zeros(500, 500, CV_8UC3);
     setMouseCallback("Canvas", onMouse, &canvas);
 
     while (1)
@@ -240,7 +179,7 @@ void send_canvas(int sock)
         }
         else if(clear_flag==-1) {
             sprintf(coordinates, "2,-10,-10,");
-            write(sock, coordinates, strlen("2,-20,-20,"));
+            write(sock, coordinates, strlen("2,-10,-10,"));
         }
         else if(clear_flag==0) {
             // Send the x and y coordinates of the mouse
@@ -250,67 +189,59 @@ void send_canvas(int sock)
             write(sock, coordinates, strlen(coordinates));
         }
         
-        printf("%s\n", coordinates);
+        // printf("%s\n", coordinates);
         memset(coordinates, 0, sizeof(coordinates));
 
-        // Break the loop if 'q' is pressed
-        if (waitKey(30) == 'q')
-            break;
+        waitKey(1);
     }
 }
 
-// void recv_canvas(int sock)
-// {
-//     char msg[BUF_SIZE];
+void recv_canvas(int sock, char * msg) // recv canvas
+{
+    int x=0;
+    int y=0;
+    int count=0;
+    char trash = ' ';
 
-//     namedWindow("Received Drawing", WINDOW_NORMAL);
-//     Mat canvas = Mat::zeros(600, 800, CV_8UC3);
-//     Point prevPoint(-1, -1);
+    // x, y 좌표값 얻기
+    char *ptr = strtok(msg, ",");
+    memset(msg, 0, strlen(msg));
 
-//     while((read(sock, msg, sizeof(msg)))!=0){
-        
-//         int x=0;
-//         int y=0;
-//         int count=0;
-//         char trash = ' ';
+    while (ptr != NULL)
+    {
+        if(count==1) x = atoi(ptr);
+        else if(count==2) y = atoi(ptr);
+        else trash = ptr[0];
 
-//         char *ptr = strtok(msg, ",");
-//         memset(msg, 0, strlen(msg));
+        ptr = strtok(NULL, ",");
+        count++;
+    }
 
-//         while (ptr != NULL)
-//         {
-//             if(count==1) x = atoi(ptr);
-//             else if(count==2) y = atoi(ptr);
-//             else trash = ptr[0];
+    // printf("x: %d and y: %d\n", x, y);
 
-//             ptr = strtok(NULL, ",");
-//             count++;
-//         }
+    if(x==-20 && y==-20) {
+        get_canvas = Scalar(0,0,0);
+    }
+    else if(x==-10 && y==-10) {
+        prevPoint.x = -1;
+        prevPoint.y = -1;
+    }
+    else {
+        currPoint = Point(x, y);
+        // printf("curr x: %d, y: %d // prev x: %d, y: %d\n", currPoint.x, currPoint.y, prevPoint.x, prevPoint.y);
 
-//         printf("x: %d and y: %d\n", x, y);
+        if (prevPoint.x != -1 && prevPoint.y != -1) {
+            line(get_canvas, prevPoint, currPoint, Scalar(255, 255, 255), 3);
+        }
 
-//         if(x==-20 && y==-20) {
-//             canvas = Scalar(0,0,0);
-//         }
-//         else if(x==-10 && y==-10) {
-//             prevPoint.x = -1;
-//             prevPoint.y = -1;
-//         }
-//         else {
-//             currPoint = Point(x, y);
+        prevPoint = currPoint;
+    }
 
-//             if (prevPoint.x != -1 && prevPoint.y != -1) {
-//                 line(canvas, prevPoint, currPoint, Scalar(255, 255, 255), 3);
-//             }
+    // Display the received drawing
+    imshow("Received Drawing", get_canvas);
+    waitKey(1);
 
-//             prevPoint = currPoint;
-//         }
-
-//         // Display the received drawing
-//         imshow("Received Drawing", canvas);
-//         waitKey(15);
-//     }
-// }
+}
 
 void error_handling(char *msg)
 {

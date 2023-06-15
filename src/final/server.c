@@ -15,7 +15,6 @@ using namespace cv;
 
 void * handle_clnt(void * arg);
 void send_msg(char * msg, int len);
-void draw_xy(int x, int y);
 void error_handling(char * msg);
 
 const char * bird_keyword[31] =
@@ -103,9 +102,8 @@ void * handle_clnt(void * arg)
 
     while((str_len=read(clnt_sock, msg, sizeof(msg)))!=0)
 	{
-        //좌표
-        if (msg[0]=='2'){
-            // draw_xy(x, y);
+        if (msg[0]=='2') // receive and send the coordinates
+        {
             for(i=0; i<clnt_cnt; i++){
 				if (clnt_socks[i] != clnt_socks[presenter]) {
 					write(clnt_socks[i], msg, sizeof(msg));
@@ -115,7 +113,8 @@ void * handle_clnt(void * arg)
 		else if (start) {
 			send_msg(msg, str_len);
 		}
-		else if ((strstr(msg,"start")!=NULL || strstr(msg,"sss")!=NULL) && clnt_cnt >= 2 && !start){
+		else if ((strstr(msg,"start")!=NULL || strstr(msg,"sss")!=NULL) && clnt_cnt >= 2 && !start)
+        {
 			start=1;
 			for(i=0; i<clnt_cnt; i++){
 				sprintf(buf, "Game Start!\n");
@@ -164,15 +163,14 @@ void * handle_clnt(void * arg)
     return NULL;
 }
 
-void send_msg(char * msg, int len)   // send to all
+void send_msg(char * msg, int len) // send to all
 {
     int i;
     char send[BUF_SIZE];
     char keyword_msg[BUF_SIZE];
     printf("send msg: %s\n", msg);
 
-
-    strcpy(send, msg); //msg 저장
+    strcpy(send, msg);
     send[strlen(msg)] = 0;
     msg[strlen(msg)-1]=0;
 
@@ -208,13 +206,6 @@ void send_msg(char * msg, int len)   // send to all
     for(i=0; i<clnt_cnt; i++)
         write(clnt_socks[i], send, strlen(send));
     pthread_mutex_unlock(&mutx);
-}
-
-
-void draw_xy(int x, int y)
-{
-
-    
 }
 
 void error_handling(char * msg)

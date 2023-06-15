@@ -6,12 +6,16 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include "opencv4/opencv2/opencv.hpp"
+
+using namespace cv;
 
 #define BUF_SIZE 100
 #define MAX_CLNT 256
 
 void * handle_clnt(void * arg);
 void send_msg(char * msg, int len);
+void draw_xy(int x, int y);
 void error_handling(char * msg);
 
 const char * bird_keyword[31] =
@@ -35,6 +39,8 @@ int clnt_cnt=0;
 int clnt_socks[MAX_CLNT];
 int presenter; //출제자
 pthread_mutex_t mutx;
+
+Mat canvas;
 
 int main(int argc, char *argv[])
 {
@@ -66,7 +72,7 @@ int main(int argc, char *argv[])
     while(1)
     {
         clnt_adr_sz=sizeof(clnt_adr);
-        clnt_sock=accept(serv_sock, (struct sockaddr*)&clnt_adr,&clnt_adr_sz);
+        clnt_sock=accept(serv_sock, (struct sockaddr*)&clnt_adr,(socklen_t *)&clnt_adr_sz);
 
         pthread_mutex_lock(&mutx);
         clnt_socks[clnt_cnt++]=clnt_sock;
@@ -81,10 +87,6 @@ int main(int argc, char *argv[])
 }
 
 int start;
-void draw_xy(int x, int y)
-{
-    printf("x: %d, y: %d\n", x,y);
-}
 
 void * handle_clnt(void * arg)
 {
@@ -96,11 +98,19 @@ void * handle_clnt(void * arg)
 
     start=0;
 
+    namedWindow("Received Drawing", WINDOW_NORMAL);
+    canvas = Mat::zeros(600, 800, CV_8UC3);
+
     while((str_len=read(clnt_sock, msg, sizeof(msg)))!=0)
 	{
         //좌표
         if (msg[0]=='2'){
-            draw_xy(msg[1],msg[2]);
+            // draw_xy(x, y);
+            for(i=0; i<clnt_cnt; i++){
+				if (clnt_socks[i] != clnt_socks[presenter]) {
+					write(clnt_socks[i], msg, sizeof(msg));
+				}
+			}
         }
 		else if (start) {
 			send_msg(msg, str_len);
@@ -198,7 +208,13 @@ void send_msg(char * msg, int len)   // send to all
     for(i=0; i<clnt_cnt; i++)
         write(clnt_socks[i], send, strlen(send));
     pthread_mutex_unlock(&mutx);
+}
 
+
+void draw_xy(int x, int y)
+{
+
+    
 }
 
 void error_handling(char * msg)

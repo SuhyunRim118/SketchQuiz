@@ -91,7 +91,6 @@ int main(int argc, char *argv[])
 void *send_canvas(void *arg)   // send thread main
 {
     int sock = *((int*)arg);
-    char name_msg[NAME_SIZE + BUF_SIZE];
     int x, y;
 
     namedWindow("Canvas", WINDOW_NORMAL);
@@ -102,7 +101,6 @@ void *send_canvas(void *arg)   // send thread main
     {
         // Display the canvas with the drawing
         imshow("Canvas", canvas);
-
 
         if(clear_flag==1) {
             x = -20;

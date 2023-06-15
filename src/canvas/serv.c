@@ -80,7 +80,6 @@ void *handle_clnt(void *arg)
     Point prevPoint(-1, -1);
 
     while(1){
-        // Receive the size of the drawing data from the client
         int x;
         int y;
 

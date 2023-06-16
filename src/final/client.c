@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <pthread.h>
+#include <time.h>
 #include <opencv2/opencv.hpp>
 
 #define BUF_SIZE 100
@@ -20,6 +21,7 @@ void error_handling(char * msg);
 
 char name[NAME_SIZE]="[DEFAULT]";
 char msg[BUF_SIZE];
+int prev_flag = -1;
 int flag = 1;
 
 // canvas related variables
@@ -103,7 +105,7 @@ void * send_msg(void * arg)   // send thread main
     char name_msg[NAME_SIZE+BUF_SIZE];
     while(1)
     {
-        if(flag==1) { // guess
+        if(flag==1) {
             fgets(msg, BUF_SIZE, stdin);
             if(!strcmp(msg,"q\n")||!strcmp(msg,"Q\n"))
             {
@@ -136,37 +138,60 @@ void * recv_msg(void * arg)   // read thread main
         return (void*)-1;
         name_msg[str_len]=0;
         
-        if (flag==1 && name_msg[0]=='2') { // read canvas
+        if (flag==1 && name_msg[0]=='2')  {
             recv_canvas(sock, name_msg);
+            memset(name_msg, 0, sizeof(name_msg));
         }
-        else {
-            if (!strcmp(name_msg, "draw")) {
-                flag = 0;
-                printf("draw: %d\n", flag);
-                sprintf(name_msg, "[Draw the Keyword!]\n");
-                send_canvas(sock);
-                // continue;
-            }
-            else if (!strcmp(name_msg, "guess")) {
-                flag = 1;
-                printf("guess: %d\n", flag);
-                sprintf(name_msg, "[Guess the Keyword!]\n");
-                // continue;
-            }
+        // if(prev_flag==1 && flag==0){
+        //     destroyWindow("Received Drawing");
+        //     prev_flag=0;
+        // }
+
+        if (!strcmp(name_msg, "draw")) { // enter draw mode
+            memset(name_msg, 0, sizeof(name_msg));
+            printf("draw: %d...%d\n", flag, prev_flag);
+            flag = 0;
+            prev_flag = 1;
+            // printf("draw: %d\n", flag);
+            sprintf(name_msg, "[Draw the Keyword!]\n");
             fputs(name_msg, stdout);
         }
+        else if (!strcmp(name_msg, "guess")) { // enter guess mode
+            memset(name_msg, 0, sizeof(name_msg));
+            if(flag==0) {
+                destroyWindow("Canvas");
+            }
+            flag = 1;
+            prev_flag = 0;
+            // printf("guess: %d\n", flag);
+            sprintf(name_msg, "[Guess the Keyword!]\n");
+            fputs(name_msg, stdout);
+        }
+        else if(flag==0 && name_msg[7]==':') { // receive keyword (only for draw mode)
+            // fputs(name_msg, stdout);
+            send_canvas(sock);
+        }
+        else fputs(name_msg, stdout);
+
+        memset(name_msg, 0, sizeof(name_msg));
+
     }
     return NULL;
 }
 
 void send_canvas(int sock) // draw and send canvas
 {
+    clock_t start, end;
+
     int x, y;
     char coordinates[BUF_SIZE];
 
     namedWindow("Canvas", WINDOW_NORMAL);
     Mat canvas = Mat::zeros(500, 500, CV_8UC3);
     setMouseCallback("Canvas", onMouse, &canvas);
+
+    // start timing
+    start = clock();
 
     while (1)
     {
@@ -193,6 +218,11 @@ void send_canvas(int sock) // draw and send canvas
         memset(coordinates, 0, sizeof(coordinates));
 
         waitKey(1);
+
+        //for 루프 끝난 시간
+        end = clock();
+        printf("Timer:%lf\n", (double)(end-start)/CLOCKS_PER_SEC);
+        if(((double)(end-start)/CLOCKS_PER_SEC)>70) break;
     }
 }
 
@@ -240,6 +270,7 @@ void recv_canvas(int sock, char * msg) // recv canvas
     // Display the received drawing
     imshow("Received Drawing", get_canvas);
     waitKey(1);
+
 
 }
 

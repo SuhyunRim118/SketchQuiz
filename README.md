@@ -27,4 +27,5 @@ $ g++ -o clnt client.c -lpthread `pkg-config --cflags --libs opencv4`
 3. 정답을 맞추면 turn이 넘어가고, 유저 전부가 2번씩 문제를 내면 게임을 종료합니다.
 
 ## 동작 화면
-[동작 화면 캡처본]
+![SketchQuiz 동작 예시](/SketchQuiz_.png)
+

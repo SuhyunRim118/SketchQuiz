@@ -142,14 +142,9 @@ void * recv_msg(void * arg)   // read thread main
             recv_canvas(sock, name_msg);
             memset(name_msg, 0, sizeof(name_msg));
         }
-        // if(prev_flag==1 && flag==0){
-        //     destroyWindow("Received Drawing");
-        //     prev_flag=0;
-        // }
 
         if (!strcmp(name_msg, "draw")) { // enter draw mode
             memset(name_msg, 0, sizeof(name_msg));
-            printf("draw: %d...%d\n", flag, prev_flag);
             flag = 0;
             prev_flag = 1;
             // printf("draw: %d\n", flag);
@@ -168,7 +163,7 @@ void * recv_msg(void * arg)   // read thread main
             fputs(name_msg, stdout);
         }
         else if(flag==0 && name_msg[7]==':') { // receive keyword (only for draw mode)
-            // fputs(name_msg, stdout);
+            fputs(name_msg, stdout);
             send_canvas(sock);
         }
         else fputs(name_msg, stdout);
@@ -219,9 +214,8 @@ void send_canvas(int sock) // draw and send canvas
 
         waitKey(1);
 
-        //for 루프 끝난 시간
         end = clock();
-        printf("Timer:%lf\n", (double)(end-start)/CLOCKS_PER_SEC);
+        // printf("Timer:%lf\n", (double)(end-start)/CLOCKS_PER_SEC);
         if(((double)(end-start)/CLOCKS_PER_SEC)>70) break;
     }
 }

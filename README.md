@@ -2,12 +2,17 @@
 
 ## 실행방법
 ```
-// Compile cmd
+// clone src code
 $ git clone https://github.com/SuhyunRim118/SketchQuiz.git
 $ cd SketchQuiz/src/final
 
+//make execution (only socket part)
 $ gcc client.c -o client -lpthread
 $ gcc server.c -o server -lpthread
+
+//make execution(with canvas)
+$ g++ -o serv server.c -lpthread `pkg-config --cflags --libs opencv4`
+$ g++ -o clnt client.c -lpthread `pkg-config --cflags --libs opencv4`
 ```
 
 ## 프로그램 설명

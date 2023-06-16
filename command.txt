@@ -1,9 +1,5 @@
-gcc -o serv chat_serv.c -lpthread
-gcc -o clnt chat_clnt.c -lpthread
+g++ -o serv server.c -lpthread `pkg-config --cflags --libs opencv4`
+g++ -o clnt client.c -lpthread `pkg-config --cflags --libs opencv4`
 
-./serv 2222
-./clnt 127.0.0.1 2222 hyun
-
-
-g++ -o serv chat_serv.c -lpthread `pkg-config --cflags --libs opencv4`
-g++ -o clnt chat_clnt.c -lpthread `pkg-config --cflags --libs opencv4`
+./serv <port>
+./clnt <IP> <port> <username>

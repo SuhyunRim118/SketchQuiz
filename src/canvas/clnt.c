@@ -121,9 +121,10 @@ void *send_canvas(void *arg)   // send thread main
             write(sock, &x, sizeof(x));
             write(sock, &y, sizeof(y));
         }
-        
 
-        waitKey(15);
+        // Break the loop if 'q' is pressed
+        if (waitKey(15) == 'q')
+            break;
     }
     return NULL;
 }
